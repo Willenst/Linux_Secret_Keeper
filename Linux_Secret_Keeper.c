@@ -6,11 +6,8 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-<<<<<<< HEAD
-MODULE_VERSION("0.05");
-=======
 MODULE_VERSION("0.06");
->>>>>>> b5f035c (На примитивнейшем уровне реализовал удаление секретов, пока привязка не к id секрета а к его позиции в массиве)
+
 
 #define MAX_SECRET_SIZE 138
 #define MAX_SECRETS 10
