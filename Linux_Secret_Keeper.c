@@ -6,7 +6,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("0.04");
+MODULE_VERSION("0.05");
 
 #define MAX_SECRET_SIZE 138
 #define MAX_SECRETS 10
