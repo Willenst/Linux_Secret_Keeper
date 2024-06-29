@@ -6,7 +6,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("0.03");
+MODULE_VERSION("0.05");
 
 #define MAX_SECRET_SIZE 138
 #define MAX_SECRETS 10
@@ -22,6 +22,7 @@ static struct secret storage[MAX_SECRETS];
 static unsigned long newsecret_size = 0;
 static char secret_buffer[MAX_SECRET_SIZE];
 static int next_id=0;
+static int read_index=-1;
 
 static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size_t buffer_length, loff_t *offset)
 {
@@ -73,6 +74,12 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             storage[next_id].secret_id = next_id;
             strscpy(storage[next_id].secret_data, secret_data, newsecret_size);
             next_id++;
+            return newsecret_size;
+        case 'R':
+            if (id > next_id)
+                return -ENOMEM;
+            read_index = id;
+            pr_info("current index %s\n", id);
             return newsecret_size;
         default:
             return -EINVAL;
