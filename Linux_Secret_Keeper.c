@@ -6,7 +6,11 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
+<<<<<<< HEAD
 MODULE_VERSION("0.05");
+=======
+MODULE_VERSION("0.06");
+>>>>>>> b5f035c (На примитивнейшем уровне реализовал удаление секретов, пока привязка не к id секрета а к его позиции в массиве)
 
 #define MAX_SECRET_SIZE 138
 #define MAX_SECRETS 10
@@ -60,6 +64,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 static ssize_t procfile_write(struct file *file, const char __user *buff, size_t size, loff_t *off)
 {
     int id;
+    int i;
     char command;
     char secret_data[MAX_SECRET_SIZE];
 
@@ -94,6 +99,13 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             read_index = id;
             pr_info("current index %s\n", id);
             return newsecret_size;
+        case 'D':
+            if (id > next_id)
+                return -EINVAL;
+            for (int i = id; i < next_id - 1; ++i) {
+                storage[i] = storage[i + 1];
+            }
+            next_id--;
         default:
             return -EINVAL;
     }
