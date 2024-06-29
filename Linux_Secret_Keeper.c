@@ -28,20 +28,33 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 {
     int i;
     char output_buffer[MAX_SECRET_SIZE*next_id];
-    
-    for (i = 0; i < next_id; i++) {
-        strcat(output_buffer,storage[i].secret_data);
-        strcat(output_buffer,"\n");
-    }
-    if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE*next_id)) { 
-        pr_info("fail!");
-        return 0;
-    }
-    else{
-        *offset += MAX_SECRET_SIZE;
-    }
-    return MAX_SECRET_SIZE;
+    if (read_index == -1){
+            for (i = 0; i < next_id; i++) {
+                strcat(output_buffer,storage[i].secret_data);
+                strcat(output_buffer,"\n");
+            }
+            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE*next_id)) { 
+                pr_info("fail!");
+                return 0;
+            }
+            else{
+                *offset += MAX_SECRET_SIZE;
+            }
+            return MAX_SECRET_SIZE;
+        }
+        else{
+            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, storage[i].secret_data, MAX_SECRET_SIZE)) { 
+                pr_info("fail!");
+                return 0;
+            }
+            else{
+                *offset += MAX_SECRET_SIZE;
+            }
+            return MAX_SECRET_SIZE;
+        }
+
 }
+
 
 
 static ssize_t procfile_write(struct file *file, const char __user *buff, size_t size, loff_t *off)
