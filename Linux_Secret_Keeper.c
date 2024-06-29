@@ -12,7 +12,7 @@ MODULE_VERSION("0.01");
 #define PROCFS_NAME "secret_stash"
 
 static struct proc_dir_entry *storage_filename;
-static char storage[PROCFS_MAX_SIZE];
+static char storage[SECRET_SIZE];
 static unsigned long newsecret_size = 0;
 
 static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size_t buffer_length, loff_t *offset)
