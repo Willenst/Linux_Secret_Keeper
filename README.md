@@ -8,7 +8,7 @@
 git clone https://github.com/Willenst/Linux_Secret_Keeper
 cd Linux_Secret_Keeper
 make
-insmod test.ko
+insmod Linux_Secret_Keeper.ko
 ```
 
 ### Удаление ненужного вам журнала работ
@@ -26,6 +26,6 @@ cat /proc/secret_stash #чтение
 ### Очистка загруженного модуля:
 
 ```bash
-rmmod test
+rmmod Linux_Secret_Keeper
 make clean
 ```
