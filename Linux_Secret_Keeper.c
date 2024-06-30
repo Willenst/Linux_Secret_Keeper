@@ -6,12 +6,14 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("0.07");
+MODULE_VERSION("0.08");
 
 
 #define MAX_SECRET_SIZE 138
 #define MAX_SECRETS 10
 #define PROCFS_NAME "secret_stash"
+#define MAX_ID 30000
+#define MIN_ID 0
 
 typedef struct secret{
     int secret_id;
@@ -102,7 +104,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
-    if (id<-1){
+    if (id<-1||id>MAX_ID||id<MIN_ID){
         return -EINVAL;
     }
     switch (command) {
