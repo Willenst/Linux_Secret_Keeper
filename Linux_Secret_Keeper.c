@@ -87,7 +87,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     char secret_data[MAX_SECRET_SIZE];
     struct list_head *pos;
     struct list_head* tmp;
-
+    bool deleted = false;
     newsecret_size = size;
 
     if (newsecret_size > MAX_SECRET_SIZE){
@@ -119,8 +119,10 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             return newsecret_size;
         case 'R':
             if (id == -1)
+            {
                 read_index = id;
                 return newsecret_size;
+            }
             if (secret_finder(id, &secrets)){
                 read_index = id;
                 return newsecret_size;
@@ -134,17 +136,18 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 if (p->secret_id == id) {
                     list_del(pos);
                     kfree(p);
+                    deleted=true;
                 }
             }
+            if (deleted==true){
             next_id--;
             return newsecret_size;
+            }
+            return -EINVAL;
         default:
             return -EINVAL;
     }
 }
-
-
-
 
 static const struct proc_ops proc_file_fops = {
     .proc_read = procfile_read,
