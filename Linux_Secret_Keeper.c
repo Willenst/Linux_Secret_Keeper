@@ -16,10 +16,10 @@ MODULE_VERSION("0.07");
 typedef struct secret{
     int secret_id;
     char secret_data[MAX_SECRET_SIZE];
-    struct list_head list_node; //переделка списка под макрос
+    struct list_head list_node;
 } secret_t;
 
-LIST_HEAD(secrets); //переделка списка под макрос
+LIST_HEAD(secrets);
 
 static struct proc_dir_entry *storage_filename;
 static struct secret storage[MAX_SECRETS];
@@ -77,6 +77,9 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     int i;
     char command;
     char secret_data[MAX_SECRET_SIZE];
+    struct list_head *pos;
+    secret_t* p = NULL;
+    struct list_head* tmp;
 
     newsecret_size = size;
 
@@ -109,13 +112,14 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             if (id > next_id)
                 return -ENOMEM;
             read_index = id;
-            pr_info("current index %s\n", id);
             return newsecret_size;
         case 'D':
-            if (id<0||id > next_id)
-                return -EINVAL;
-            for (int i = id; i < next_id - 1; ++i) {
-                storage[i] = storage[i + 1];
+            list_for_each_safe(pos, tmp, &secrets) {
+                secret_t* p = list_entry(pos, secret_t, list_node);
+                if (p->secret_id == id) {
+                    list_del(pos);
+                    kfree(p);
+                }
             }
             next_id--;
         default:
