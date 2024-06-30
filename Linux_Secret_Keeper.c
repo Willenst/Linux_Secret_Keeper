@@ -35,7 +35,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
                 sprintf(temp_buffer, "%d. %s\n",storage[i].secret_id,storage[i].secret_data);
                 strcat(output_buffer,temp_buffer);
             }
-            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE)) { 
+            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE*next_id)) { 
                 pr_info("fail!");
                 return 0;
             }
