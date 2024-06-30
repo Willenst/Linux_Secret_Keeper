@@ -13,10 +13,13 @@ MODULE_VERSION("0.07");
 #define MAX_SECRETS 10
 #define PROCFS_NAME "secret_stash"
 
-struct secret{
+typedef struct secret{
     int secret_id;
     char secret_data[MAX_SECRET_SIZE];
-};
+    struct list_head list_node; //переделка списка под макрос
+} secret_t;
+
+LIST_HEAD(secrets); //переделка списка под макрос
 
 static struct proc_dir_entry *storage_filename;
 static struct secret storage[MAX_SECRETS];
@@ -35,7 +38,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
                 sprintf(temp_buffer, "%d. %s\n",storage[i].secret_id,storage[i].secret_data);
                 strcat(output_buffer,temp_buffer);
             }
-            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE*next_id)) { 
+            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE)) { 
                 pr_info("fail!");
                 return 0;
             }
@@ -89,8 +92,20 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         case 'W':
             if (next_id >= MAX_SECRETS||id > next_id)
                 return -ENOMEM;
-            storage[next_id].secret_id = next_id;
-            strscpy(storage[next_id].secret_data, secret_data, newsecret_size);
+            secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
+            new_secret->secret_id = next_id;
+            strscpy(new_secret->secret_data, secret_data, MAX_SECRET_SIZE);        
+            list_add_tail(&new_secret->list_node, &secrets);
+
+            struct  list_head *pos;
+            int counter = 0;
+
+            list_for_each(pos, &secrets) {
+                secret_t* p = NULL;
+                p = list_entry(pos, secret_t, list_node);
+                pr_info("Secret %d {%d, %s}\n", counter, p->secret_id, p->secret_data);
+                counter++;
+            }
             next_id++;
             return newsecret_size;
         case 'R':
