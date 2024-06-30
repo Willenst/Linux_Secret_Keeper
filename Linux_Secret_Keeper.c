@@ -66,6 +66,18 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
     return MAX_SECRET_SIZE;
 }
 
+static bool secret_finder(int id, struct list_head *secrets) {
+    struct list_head *pos;
+
+    list_for_each(pos, secrets) {
+        secret_t *p = list_entry(pos, secret_t, list_node);
+        if (p->secret_id == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 
 static ssize_t procfile_write(struct file *file, const char __user *buff, size_t size, loff_t *off)
@@ -74,9 +86,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     char command;
     char secret_data[MAX_SECRET_SIZE];
     struct list_head *pos;
-    secret_t* p = NULL;
     struct list_head* tmp;
-    bool secret_found = false;
 
     newsecret_size = size;
 
@@ -99,6 +109,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         case 'W':
             if (next_id >= MAX_SECRETS)
                 return -ENOMEM;
+            if (secret_finder(id, &secrets))
+                return -EINVAL;
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
             strscpy(new_secret->secret_data, secret_data, MAX_SECRET_SIZE);        
@@ -106,26 +118,14 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             next_id++;
             return newsecret_size;
         case 'R':
-            if (id == -1){
-            return newsecret_size;
+            if (id == -1)
+                read_index = id;
+                return newsecret_size;
+            if (secret_finder(id, &secrets)){
+                read_index = id;
+                return newsecret_size;
             }
-            else
-            {
-            list_for_each(pos, &secrets) {
-                secret_t* p = list_entry(pos, secret_t, list_node);
-                if (p->secret_id == id) {
-                    secret_found = true;
-                }
-            }
-            if (secret_found){
-            read_index = id;
-            return newsecret_size;
-            }
-            else
-            {
-                return -EINVAL;
-            }
-            }
+            return -EINVAL;
         case 'D':
             if (next_id<1)
                 return -EINVAL;
@@ -136,8 +136,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                     kfree(p);
                 }
             }
-            return -EINVAL;
             next_id--;
+            return newsecret_size;
         default:
             return -EINVAL;
     }
