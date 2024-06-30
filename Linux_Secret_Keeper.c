@@ -22,7 +22,6 @@ typedef struct secret{
 LIST_HEAD(secrets);
 
 static struct proc_dir_entry *storage_filename;
-static struct secret storage[MAX_SECRETS];
 static unsigned long newsecret_size = 0;
 static char secret_buffer[MAX_SECRET_SIZE];
 static int next_id=0;
@@ -32,7 +31,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 {
     struct list_head *pos;
     secret_t* p = NULL;
-    char output_buffer[MAX_SECRET_SIZE*(next_id+1)];
+    char output_buffer[MAX_SECRET_SIZE*MAX_SECRETS];
     char temp_buffer[MAX_SECRET_SIZE];
     if (read_index == -1){
             list_for_each(pos, &secrets) {
@@ -41,7 +40,6 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
                 strcat(output_buffer,temp_buffer);
             }
             if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE)) { 
-                pr_info("fail!");
                 return 0;
             }
             else{
@@ -56,7 +54,6 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
         if (p->secret_id == read_index) {
             sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
             if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) { 
-                pr_info("fail!");
                 return 0;
             }
             else{
@@ -74,24 +71,24 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 static ssize_t procfile_write(struct file *file, const char __user *buff, size_t size, loff_t *off)
 {
     int id;
-    int i;
     char command;
     char secret_data[MAX_SECRET_SIZE];
     struct list_head *pos;
     secret_t* p = NULL;
     struct list_head* tmp;
+    bool secret_found = false;
 
     newsecret_size = size;
 
     if (newsecret_size > MAX_SECRET_SIZE){
-        newsecret_size = MAX_SECRET_SIZE;
+        return -EINVAL;
     }
 
     if (copy_from_user(secret_buffer, buff, newsecret_size)){
         return -EFAULT; 
     }
 
-    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data) !=3 ){
+    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data)<2){
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
@@ -100,20 +97,38 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     }
     switch (command) {
         case 'W':
-            if (next_id >= MAX_SECRETS||id > next_id)
+            if (next_id >= MAX_SECRETS)
                 return -ENOMEM;
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
-            new_secret->secret_id = next_id;
+            new_secret->secret_id = id;
             strscpy(new_secret->secret_data, secret_data, MAX_SECRET_SIZE);        
             list_add_tail(&new_secret->list_node, &secrets);
             next_id++;
             return newsecret_size;
         case 'R':
-            if (id > next_id)
-                return -ENOMEM;
+            if (id == -1){
+            return newsecret_size;
+            }
+            else
+            {
+            list_for_each(pos, &secrets) {
+                secret_t* p = list_entry(pos, secret_t, list_node);
+                if (p->secret_id == id) {
+                    secret_found = true;
+                }
+            }
+            if (secret_found){
             read_index = id;
             return newsecret_size;
+            }
+            else
+            {
+                return -EINVAL;
+            }
+            }
         case 'D':
+            if (next_id<1)
+                return -EINVAL;
             list_for_each_safe(pos, tmp, &secrets) {
                 secret_t* p = list_entry(pos, secret_t, list_node);
                 if (p->secret_id == id) {
@@ -121,11 +136,13 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                     kfree(p);
                 }
             }
+            return -EINVAL;
             next_id--;
         default:
             return -EINVAL;
     }
 }
+
 
 
 
