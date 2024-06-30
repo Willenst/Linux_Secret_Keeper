@@ -30,12 +30,14 @@ static int read_index=-1;
 
 static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size_t buffer_length, loff_t *offset)
 {
-    int i;
+    struct list_head *pos;
+    secret_t* p = NULL;
     char output_buffer[MAX_SECRET_SIZE*(next_id+1)];
     char temp_buffer[MAX_SECRET_SIZE];
     if (read_index == -1){
-            for (i = 0; i < next_id; i++) {
-                sprintf(temp_buffer, "%d. %s\n",storage[i].secret_id,storage[i].secret_data);
+            list_for_each(pos, &secrets) {
+                p = list_entry(pos, secret_t, list_node);
+                sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
                 strcat(output_buffer,temp_buffer);
             }
             if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE)) { 
@@ -49,16 +51,21 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
         return MAX_SECRET_SIZE;
             }
     else{
-        sprintf(temp_buffer, "%d. %s\n",storage[read_index].secret_id,storage[read_index].secret_data);
-        if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) { 
-            pr_info("fail!");
-            return 0;
+        list_for_each(pos, &secrets){
+            p = list_entry(pos, secret_t, list_node);
+        if (p->secret_id == read_index) {
+            sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
+            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) { 
+                pr_info("fail!");
+                return 0;
+            }
+            else{
+                *offset += MAX_SECRET_SIZE;
+            }
+            return MAX_SECRET_SIZE;
         }
-        else{
-            *offset += MAX_SECRET_SIZE;
         }
-        return MAX_SECRET_SIZE;
-        }
+    }
     return MAX_SECRET_SIZE;
 }
 
@@ -96,16 +103,6 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             new_secret->secret_id = next_id;
             strscpy(new_secret->secret_data, secret_data, MAX_SECRET_SIZE);        
             list_add_tail(&new_secret->list_node, &secrets);
-
-            struct  list_head *pos;
-            int counter = 0;
-
-            list_for_each(pos, &secrets) {
-                secret_t* p = NULL;
-                p = list_entry(pos, secret_t, list_node);
-                pr_info("Secret %d {%d, %s}\n", counter, p->secret_id, p->secret_data);
-                counter++;
-            }
             next_id++;
             return newsecret_size;
         case 'R':
