@@ -6,40 +6,109 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("0.01");
+MODULE_VERSION("0.07");
 
-#define SECRET_SIZE 128
+
+#define MAX_SECRET_SIZE 138
+#define MAX_SECRETS 10
 #define PROCFS_NAME "secret_stash"
 
+struct secret{
+    int secret_id;
+    char secret_data[MAX_SECRET_SIZE];
+};
+
 static struct proc_dir_entry *storage_filename;
-static char storage[SECRET_SIZE];
+static struct secret storage[MAX_SECRETS];
 static unsigned long newsecret_size = 0;
+static char secret_buffer[MAX_SECRET_SIZE];
+static int next_id=0;
+static int read_index=-1;
 
 static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size_t buffer_length, loff_t *offset)
 {
-    if (*offset >= SECRET_SIZE||copy_to_user(buffer, storage, SECRET_SIZE)) { 
-        pr_info("fail!");
-        return 0;
-    }
+    int i;
+    char output_buffer[MAX_SECRET_SIZE*(next_id+1)];
+    char temp_buffer[MAX_SECRET_SIZE];
+    if (read_index == -1){
+            for (i = 0; i < next_id; i++) {
+                sprintf(temp_buffer, "%d. %s\n",storage[i].secret_id,storage[i].secret_data);
+                strcat(output_buffer,temp_buffer);
+            }
+            if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE*next_id)) { 
+                pr_info("fail!");
+                return 0;
+            }
+            else{
+                *offset += MAX_SECRET_SIZE;
+            }
+
+        return MAX_SECRET_SIZE;
+            }
     else{
-        *offset += SECRET_SIZE;
-    }
-    return SECRET_SIZE;
+        sprintf(temp_buffer, "%d. %s\n",storage[read_index].secret_id,storage[read_index].secret_data);
+        if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) { 
+            pr_info("fail!");
+            return 0;
+        }
+        else{
+            *offset += MAX_SECRET_SIZE;
+        }
+        return MAX_SECRET_SIZE;
+        }
+    return MAX_SECRET_SIZE;
 }
+
 
 
 static ssize_t procfile_write(struct file *file, const char __user *buff, size_t size, loff_t *off)
 {
+    int id;
+    int i;
+    char command;
+    char secret_data[MAX_SECRET_SIZE];
+
     newsecret_size = size;
-    if (newsecret_size > SECRET_SIZE){
-        newsecret_size = SECRET_SIZE;
+
+    if (newsecret_size > MAX_SECRET_SIZE){
+        newsecret_size = MAX_SECRET_SIZE;
     }
-    if (copy_from_user(storage, buff, newsecret_size)){
+
+    if (copy_from_user(secret_buffer, buff, newsecret_size)){
         return -EFAULT; 
     }
-    storage[newsecret_size & (SECRET_SIZE - 1)] = '\0';
-    pr_info("procfile write %s\n", storage);
-    return newsecret_size;
+
+    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data) !=3 ){
+        printk(KERN_ERR "Failed to parse input\n");
+        return -EFAULT;
+    }
+    if (id<-1){
+        return -EINVAL;
+    }
+    switch (command) {
+        case 'W':
+            if (next_id >= MAX_SECRETS||id > next_id)
+                return -ENOMEM;
+            storage[next_id].secret_id = next_id;
+            strscpy(storage[next_id].secret_data, secret_data, newsecret_size);
+            next_id++;
+            return newsecret_size;
+        case 'R':
+            if (id > next_id)
+                return -ENOMEM;
+            read_index = id;
+            pr_info("current index %s\n", id);
+            return newsecret_size;
+        case 'D':
+            if (id<0||id > next_id)
+                return -EINVAL;
+            for (int i = id; i < next_id - 1; ++i) {
+                storage[i] = storage[i + 1];
+            }
+            next_id--;
+        default:
+            return -EINVAL;
+    }
 }
 
 
