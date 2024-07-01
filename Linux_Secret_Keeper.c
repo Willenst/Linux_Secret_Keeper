@@ -110,7 +110,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     switch (command) {
         case 'W':
             if (next_id >= MAX_SECRETS||id<MIN_ID)
-                return -ENOMEM;
+                return -EINVAL;
             if (secret_finder(id, &secrets)||(strlen(secret_data)<1))
                 return -EINVAL;
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
