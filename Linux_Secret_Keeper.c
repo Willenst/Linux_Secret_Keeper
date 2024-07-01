@@ -104,14 +104,14 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
-    if (id<-1||id>MAX_ID||id<MIN_ID){
+    if (id<-1||id>MAX_ID||id<MIN_ID-1){
         return -EINVAL;
     }
     switch (command) {
         case 'W':
-            if (next_id >= MAX_SECRETS)
+            if (next_id >= MAX_SECRETS||id<MIN_ID)
                 return -ENOMEM;
-            if (secret_finder(id, &secrets))
+            if (secret_finder(id, &secrets)||(strlen(secret_data)<1))
                 return -EINVAL;
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
