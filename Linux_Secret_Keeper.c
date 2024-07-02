@@ -6,7 +6,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("0.08");
+MODULE_VERSION("1.00");
 
 //задание максимамального размера секрета, количества секретов, папки в procfs и лимитов на индексы
 //specifying the maximum secret size, number of secrets, folder in procfs and index limits
