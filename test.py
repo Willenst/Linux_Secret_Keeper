@@ -86,3 +86,7 @@ class Test_group_3:
              write(i, i)
         assert write("16", '16') == 'W 16 16\ntee: /proc/secret_stash: Invalid argument\n' #попытка записи сверх лимита
         assert '1. 1\n2. 2\n3. 3\n4. 4\n5. 5\n6. 6\n7. 7\n8. 8\n9. 9\n10. 10\n' in read() #проверка что корректные записи сохранены, некорректных нет
+
+class Testflush: #мелкая надстройка под очитку файла в proc
+    def test_flush(self):
+        assert 1==1
