@@ -14,9 +14,9 @@ make
 insmod Linux_Secret_Keeper.ko
 ```
 
-### Удаление ненужного вам журнала работ
+### Удаление ненужного вам журнала работ:
 ```
-rm journal.md
+rm journal.md; rm -rf Images
 ```
 
 ### Использование:
@@ -35,14 +35,14 @@ rmmod Linux_Secret_Keeper
 make clean
 ```
 
-### Тестирование. Необходимые пакеты.
+### Тестирование. Необходимые пакеты:
 
 У вас должен присуствовать Python 3-й версии и модуль pytest
 ```bash
 pip install pytest
 ```
 
-### Тестирование. Запуск тестов.
+### Тестирование. Запуск тестов:
 
 py.test -s -v test.py
 
@@ -62,9 +62,9 @@ make
 insmod Linux_Secret_Keeper.ko
 ```
 
-### Removing journal
+### Removing journal:
 ```
-rm journal.md
+rm journal.md; rm -rf Images
 ```
 
 ### Usage:
@@ -83,13 +83,13 @@ rmmod Linux_Secret_Keeper
 make clean
 ```
 
-### Testing. Requered packages/
+### Testing. Requered packages:
 
 Python version 3, pytest
 ```bash
 pip install pytest
 ```
 
-### Testing. Running tests.
+### Testing. Running tests:
 
 py.test -s -v test.py
