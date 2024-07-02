@@ -44,7 +44,9 @@ pip install pytest
 
 ### Тестирование. Запуск тестов:
 
+```bash
 py.test -s -v test.py
+```
 
 # Linux_Secret_Keeper / EN
 
@@ -92,4 +94,6 @@ pip install pytest
 
 ### Testing. Running tests:
 
+```bash
 py.test -s -v test.py
+```
