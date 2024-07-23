@@ -87,7 +87,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
 {
     int id;
     char command;
-    char secret_data[MAX_SECRET_SIZE];
+    char secret_data_input[MAX_SECRET_SIZE];
     struct list_head *pos;
     struct list_head* tmp;
     bool deleted = false;
@@ -104,7 +104,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         return -EFAULT; 
     }
     //data parser //парсер :)
-    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data)<2){
+    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data_input)<2){
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
@@ -117,11 +117,11 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         case 'W':
             if (next_id >= MAX_SECRETS||id<MIN_ID)
                 return -EINVAL;
-            if (secret_finder(id, &secrets)||(strlen(secret_data)<1))
+            if (secret_finder(id, &secrets)||(strlen(secret_data_input)<1))
                 return -EINVAL;
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
-            strscpy(new_secret->secret_data, secret_data, MAX_SECRET_SIZE);        
+            strscpy(new_secret->secret_data, secret_data_input, MAX_SECRET_SIZE);        
             list_add_tail(&new_secret->list_node, &secrets);
             next_id++;
             return newsecret_size;
