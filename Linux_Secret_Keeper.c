@@ -38,7 +38,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
     secret_t* p = NULL;
     char *output_buffer = kmalloc(MAX_SECRET_SIZE*next_id, GFP_KERNEL);;
     char *temp_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
-        if (!output_buffer||!temp_buffer) {
+    if (!output_buffer||!temp_buffer) {
         pr_crit("Memory error, probably out of memory!");
         return -ENOMEM;
     }
@@ -62,7 +62,8 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
             if (p->secret_id == read_index) {
                 sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
                 if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) {
-                    kfree(temp_buffer); 
+                    kfree(temp_buffer);
+                    kfree(output_buffer);
                     return 0;
                 } else {
                     *offset += MAX_SECRET_SIZE;
@@ -185,7 +186,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         //delete mode, works through the macro system and cleans the memory of the deleted item
         case 'D':
             if (next_id<1){
-                pr_err("secret id must be positive");
+                pr_err("no secrets left");
                 return -EINVAL;
                 }
             list_for_each_safe(pos, tmp, &secrets) {
@@ -195,11 +196,11 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                     kfree(p->secret_data);
                     kfree(p);
                     deleted=true;
+                    next_id--;
                 }
             }
             if (deleted==true){
-            next_id--;
-            return newsecret_size;
+                return newsecret_size;
             }
             pr_err("no secret with id = %i",id);
             return -EINVAL;
