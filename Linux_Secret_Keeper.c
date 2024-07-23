@@ -87,7 +87,11 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
 {
     int id;
     char command;
-    char secret_data_input[MAX_SECRET_SIZE];
+    char *secret_data_input = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+    if (!secret_data_input) {
+        pr_crit("Memory error, probably out of memory!");
+        return -ENOMEM;
+    }
     struct list_head *pos;
     struct list_head* tmp;
     bool deleted = false;
@@ -132,10 +136,15 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 }
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
-            new_secret->secret_data = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL); // ДОКИНУТЬ ОБРАБОТКУ ОШИБОК!!!
+            new_secret->secret_data = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+            if (!secret_data_input||!new_secret) {
+                pr_crit("Memory error, probably out of memory!");
+                return -ENOMEM;
+            }
             strscpy(new_secret->secret_data, secret_data_input, MAX_SECRET_SIZE);        
             list_add_tail(&new_secret->list_node, &secrets);
             next_id++;
+            kfree(secret_data_input);
             return newsecret_size;
         //режим чтения, выставляет режим функции чтения, либо какая то кокретная запись, либо все (-1)
         //read mode, sets the mode of the read function, either a specific record or all (-1)
