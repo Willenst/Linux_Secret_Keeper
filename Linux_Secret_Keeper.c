@@ -6,7 +6,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("1.00");
+MODULE_VERSION("1.01");
 
 //задание максимамального размера секрета, количества секретов, папки в procfs и лимитов на индексы
 //specifying the maximum secret size, number of secrets, folder in procfs and index limits
@@ -14,12 +14,12 @@ MODULE_VERSION("1.00");
 #define MAX_SECRETS 10
 #define PROCFS_NAME "secret_stash"
 #define MAX_ID 30000
-#define MIN_ID 0
+#define MIN_ID -1
 //структура секрета - массив специально созданный под работу смакросом списков
 //secret structure - an array of lists specially created to work with lists macro
 typedef struct secret{
     int secret_id;
-    char secret_data[MAX_SECRET_SIZE];
+    char *secret_data;
     struct list_head list_node;
 } secret_t;
 
@@ -27,7 +27,6 @@ LIST_HEAD(secrets); //инициализация макроса //macro initiali
 
 static struct proc_dir_entry *storage_filename;
 static unsigned long newsecret_size = 0;
-static char secret_buffer[MAX_SECRET_SIZE];
 static int next_id=0;
 static int read_index=-1;
 
@@ -37,15 +36,17 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 {
     struct list_head *pos;
     secret_t* p = NULL;
-    char output_buffer[MAX_SECRET_SIZE*MAX_SECRETS];
-    char temp_buffer[MAX_SECRET_SIZE];
+    char *output_buffer = kmalloc(MAX_SECRET_SIZE*next_id, GFP_KERNEL);;
+    char *temp_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
     if (read_index == -1){ //итератор для чтения всех элементов //iterator to read all elements
         list_for_each(pos, &secrets) {
             p = list_entry(pos, secret_t, list_node);
             sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
             strcat(output_buffer,temp_buffer);
         }
+        kfree(temp_buffer);
         if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE)) { 
+            kfree(output_buffer);
             return 0;
         } else {
             *offset += MAX_SECRET_SIZE;
@@ -56,7 +57,8 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
             p = list_entry(pos, secret_t, list_node);
             if (p->secret_id == read_index) {
                 sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
-                if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) { 
+                if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) {
+                    kfree(temp_buffer); 
                     return 0;
                 } else {
                     *offset += MAX_SECRET_SIZE;
@@ -87,7 +89,12 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
 {
     int id;
     char command;
-    char secret_data[MAX_SECRET_SIZE];
+    char *secret_data_input = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+    char *secret_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+    if (!secret_data_input||!secret_buffer) {
+        pr_crit("Memory error, probably out of memory!");
+        return -ENOMEM;
+    }
     struct list_head *pos;
     struct list_head* tmp;
     bool deleted = false;
@@ -96,34 +103,61 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     // Check if the size of incoming data exceeds the maximum allowed size
     // Проверка, не превышает ли входная информация максимальный предел 
     if (newsecret_size > MAX_SECRET_SIZE){
-        return -EINVAL;
+        pr_err("secret size = %lu, secret size must be lower than %i bytes!",newsecret_size,MAX_SECRET_SIZE);
+        return -ENOMEM;
     }
 
     // Copy data from user space to kernel space //копирование пользовательского ввода из userspace
     if (copy_from_user(secret_buffer, buff, newsecret_size)){
+        printk(KERN_ERR "Failed to copy user input\n");
         return -EFAULT; 
     }
     //data parser //парсер :)
-    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data)<2){
+    if (sscanf(secret_buffer, "%c %d %s", &command, &id, secret_data_input)<2){
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
-    if (id<-1||id>MAX_ID||id<MIN_ID-1){
+    kfree(secret_buffer);
+    if (id<MIN_ID||id>MAX_ID){
+        pr_err("id = %i, id is limited between %i and %i!",id, MAX_ID,MIN_ID);
         return -EINVAL;
     }
     switch (command) {
         //режим чтения, после пары проверок выделяет память под массив и заполняем его входными данными
         //read mode, after a couple of checks allocates memory for the array and fills it with input data
         case 'W':
-            if (next_id >= MAX_SECRETS||id<MIN_ID)
+            if (next_id >= MAX_SECRETS){
+                pr_err("maximum number of secrets exceeded, delete some secrets!");
+                return -ENOMEM;
+                }
+            if (secret_finder(id, &secrets)||(strlen(secret_data_input)<1)){
+                pr_err("secret with id = %i already exists!",id);
                 return -EINVAL;
-            if (secret_finder(id, &secrets)||(strlen(secret_data)<1))
-                return -EINVAL;
+                }
+            if (id==-1)
+            {   
+                    for (int z = 0; z < MAX_ID; z++) {
+                        if (!secret_finder(z, &secrets)){
+                            id=z;
+                            break;
+                    }
+                }
+                if (id==-1){
+                    pr_err("id can't be created!");
+                    return -EINVAL;
+                }
+                }
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
-            strscpy(new_secret->secret_data, secret_data, MAX_SECRET_SIZE);        
+            new_secret->secret_data = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+            if (!secret_data_input||!new_secret) {
+                pr_crit("Memory error, probably out of memory!");
+                return -ENOMEM;
+            }
+            strscpy(new_secret->secret_data, secret_data_input, MAX_SECRET_SIZE);        
             list_add_tail(&new_secret->list_node, &secrets);
             next_id++;
+            kfree(secret_data_input);
             return newsecret_size;
         //режим чтения, выставляет режим функции чтения, либо какая то кокретная запись, либо все (-1)
         //read mode, sets the mode of the read function, either a specific record or all (-1)
@@ -137,15 +171,18 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 read_index = id;
                 return newsecret_size;
             }
+            pr_err("no secret with id = %i",id);
             return -EINVAL;
         //режим удаления, работает через систему макросов и чистит память удаленного элемента
         //delete mode, works through the macro system and cleans the memory of the deleted item
         case 'D':
-            if (next_id<1)
+            if (next_id<1){
+                pr_err("secret id must be positive");
                 return -EINVAL;
+                }
             list_for_each_safe(pos, tmp, &secrets) {
                 secret_t* p = list_entry(pos, secret_t, list_node);
-                if (p->secret_id == id) {
+                if (p->secret_id == id||id==-1) {
                     list_del(pos);
                     kfree(p);
                     deleted=true;
@@ -155,8 +192,10 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             next_id--;
             return newsecret_size;
             }
+            pr_err("no secret with id = %i",id);
             return -EINVAL;
         default:
+            pr_err("no operation was set or unknown operation");
             return -EINVAL;
     }
 }
@@ -174,7 +213,7 @@ static int __init procfs2_init(void)
     storage_filename = proc_create(PROCFS_NAME, 0644, NULL, &proc_file_fops);
     if (NULL == storage_filename) {
     proc_remove(storage_filename);
-    pr_alert("Error:Could not initialize /proc/%s\n", PROCFS_NAME);
+    pr_crit("Error:Could not initialize /proc/%s\n", PROCFS_NAME);
     return -ENOMEM;
     }
     pr_info("/proc/%s created\n", PROCFS_NAME);

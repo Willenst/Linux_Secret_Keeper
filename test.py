@@ -82,13 +82,23 @@ class Test_group_2:
 
 class Test_group_3:
     def test_input_overflow(self):
-        assert write(1,'1'*150) == 'W 1 '+'1'*150+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка превысить длинну секрета # attempt to exceed secret length
-        assert write(-1,'1'*5) == 'W -1 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка создать запись вне массива # attempt to create entry outside array
+        assert write(1,'1'*150) == 'W 1 '+'1'*150+'\ntee: /proc/secret_stash: Cannot allocate memory\n' #попытка превысить длинну секрета # attempt to exceed secret length
+        assert write(-2,'1'*5) == 'W -2 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка создать запись вне массива # attempt to create entry outside array
         assert write(35000,'1'*5) == 'W 35000 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' 
         for i in range(1,15):
              write(i, i)
-        assert write("16", '16') == 'W 16 16\ntee: /proc/secret_stash: Invalid argument\n' #попытка записи сверх лимита # attempt to write beyond limit
+        assert write("16", '16') == 'W 16 16\ntee: /proc/secret_stash: Cannot allocate memory\n' #попытка записи сверх лимита # attempt to write beyond limit
         assert '1. 1\n2. 2\n3. 3\n4. 4\n5. 5\n6. 6\n7. 7\n8. 8\n9. 9\n10. 10\n' in read() #проверка что корректные записи сохранены, некорректных нет # check that correct entries are saved, incorrect ones are not
+
+class Test_group_4:
+    def test_automatization(self):
+        write(2, 123123) #проверка корректности при наличии сторонней записи #check errors in case there is already a secret
+        for i in range(0,3):
+             write(-1, str(i)*10) #проверка работоспособности автоматического выбора id #check writing id automatization
+        assert '2. 123123\n0. 0000000000\n1. 1111111111\n3. 2222222222\n' in read()
+        delete(-1) #проверка удаления всех записей
+        assert ('123123' or '0000000000' or '1111111111' or '2222222222') not in read()
+
 
 class Testflush: #мелкая надстройка под очитку файла в proc # small enhancement to cleanup proc entry
     def test_flush(self):
