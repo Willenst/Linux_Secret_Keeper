@@ -27,7 +27,6 @@ LIST_HEAD(secrets); //инициализация макроса //macro initiali
 
 static struct proc_dir_entry *storage_filename;
 static unsigned long newsecret_size = 0;
-static char secret_buffer[MAX_SECRET_SIZE];
 static int next_id=0;
 static int read_index=-1;
 
@@ -37,15 +36,17 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 {
     struct list_head *pos;
     secret_t* p = NULL;
-    char output_buffer[MAX_SECRET_SIZE*MAX_SECRETS];
-    char temp_buffer[MAX_SECRET_SIZE];
+    char *output_buffer = kmalloc(MAX_SECRET_SIZE*MAX_SECRETS, GFP_KERNEL);;
+    char *temp_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
     if (read_index == -1){ //итератор для чтения всех элементов //iterator to read all elements
         list_for_each(pos, &secrets) {
             p = list_entry(pos, secret_t, list_node);
             sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
             strcat(output_buffer,temp_buffer);
         }
+        kfree(temp_buffer);
         if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, output_buffer, MAX_SECRET_SIZE)) { 
+            kfree(output_buffer);
             return 0;
         } else {
             *offset += MAX_SECRET_SIZE;
@@ -56,7 +57,8 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
             p = list_entry(pos, secret_t, list_node);
             if (p->secret_id == read_index) {
                 sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
-                if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) { 
+                if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) {
+                    kfree(temp_buffer); 
                     return 0;
                 } else {
                     *offset += MAX_SECRET_SIZE;
@@ -88,7 +90,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     int id;
     char command;
     char *secret_data_input = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
-    if (!secret_data_input) {
+    char *secret_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+    if (!secret_data_input||!secret_buffer) {
         pr_crit("Memory error, probably out of memory!");
         return -ENOMEM;
     }
@@ -114,6 +117,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
+    kfree(secret_buffer);
     if (id<MIN_ID||id>MAX_ID){
         pr_err("id = %i, id is limited between %i and %i!",id, MAX_ID,MIN_ID);
         return -EINVAL;
