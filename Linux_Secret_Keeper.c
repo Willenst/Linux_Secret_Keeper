@@ -6,7 +6,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ratochka Vyacheslav");
 MODULE_DESCRIPTION("A simple procfs storage module.");
-MODULE_VERSION("1.00");
+MODULE_VERSION("1.01");
 
 //задание максимамального размера секрета, количества секретов, папки в procfs и лимитов на индексы
 //specifying the maximum secret size, number of secrets, folder in procfs and index limits
@@ -36,7 +36,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
 {
     struct list_head *pos;
     secret_t* p = NULL;
-    char *output_buffer = kmalloc(MAX_SECRET_SIZE*MAX_SECRETS, GFP_KERNEL);;
+    char *output_buffer = kmalloc(MAX_SECRET_SIZE*next_id, GFP_KERNEL);;
     char *temp_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
     if (read_index == -1){ //итератор для чтения всех элементов //iterator to read all elements
         list_for_each(pos, &secrets) {
