@@ -48,6 +48,13 @@ pip install pytest
 py.test -s -v test.py
 ```
 
+### Обработка ошибок.
+
+В случае ошибок, смотрите лог ядра для более детальной информации:
+```
+dmesg
+```
+
 # Linux_Secret_Keeper / EN
 
 So, are you tired of all these disk-stored notebooks that are always being read by everyone? Maybe you've always dreamed of organizing your own secret storage inside the Linux kernel space? Linux_Secret_Keeper - the solution to all your problems. This innovative kernel module will allow you to write all the secrets directly into kernel memory, making them as isolated and inaccessible as possible! This project is currently under development but already has some working functionality. Version v0.08 supports multi-string writing in kernel memory, reading from there, and deleting data, all of which can be assigned and manipulated with an individual ID (from 0 to 30000). Also, there is a journal in russian about the working process - journal.md, if someone will find it interesting, i can translate it one day!
@@ -96,4 +103,11 @@ pip install pytest
 
 ```bash
 py.test -s -v test.py
+```
+
+### Errors handling.
+
+in case of errors, check kernel log for more detailed info:
+```
+dmesg
 ```
