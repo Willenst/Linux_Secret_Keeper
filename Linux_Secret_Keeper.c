@@ -96,11 +96,13 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     // Check if the size of incoming data exceeds the maximum allowed size
     // Проверка, не превышает ли входная информация максимальный предел 
     if (newsecret_size > MAX_SECRET_SIZE){
-        return -EINVAL;
+        pr_err("secret size = %lu, secret size must be lower than %i bytes!",newsecret_size,MAX_SECRET_SIZE);
+        return -ENOMEM;
     }
 
     // Copy data from user space to kernel space //копирование пользовательского ввода из userspace
     if (copy_from_user(secret_buffer, buff, newsecret_size)){
+        printk(KERN_ERR "Failed to copy user input\n");
         return -EFAULT; 
     }
     //data parser //парсер :)
@@ -108,17 +110,26 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
-    if (id<-1||id>MAX_ID||id<MIN_ID-1){
+    if (id<-1||id>MAX_ID){
+        pr_err("id = %i, id is limited between %i and %i!",id, MAX_ID,(MIN_ID-1));
         return -EINVAL;
     }
     switch (command) {
         //режим чтения, после пары проверок выделяет память под массив и заполняем его входными данными
         //read mode, after a couple of checks allocates memory for the array and fills it with input data
         case 'W':
-            if (next_id >= MAX_SECRETS||id<MIN_ID)
+            if (next_id >= MAX_SECRETS){
+                pr_err("maximum number of secrets exceeded, delete some secrets!");
+                return -ENOMEM;
+                }
+            if (id<MIN_ID){
+                pr_err("id = %i, write id must be positive!",id);
+                return -EINVAL;  
+            }
+            if (secret_finder(id, &secrets)||(strlen(secret_data_input)<1)){
+                pr_err("secret with id = %i already exists!",id);
                 return -EINVAL;
-            if (secret_finder(id, &secrets)||(strlen(secret_data_input)<1))
-                return -EINVAL;
+                }
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
             new_secret->secret_data = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL); // ДОКИНУТЬ ОБРАБОТКУ ОШИБОК!!!
@@ -138,12 +149,15 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 read_index = id;
                 return newsecret_size;
             }
+            pr_err("no secret with id = %i",id);
             return -EINVAL;
         //режим удаления, работает через систему макросов и чистит память удаленного элемента
         //delete mode, works through the macro system and cleans the memory of the deleted item
         case 'D':
-            if (next_id<1)
+            if (next_id<1){
+                pr_err("secret id must be positive");
                 return -EINVAL;
+                }
             list_for_each_safe(pos, tmp, &secrets) {
                 secret_t* p = list_entry(pos, secret_t, list_node);
                 if (p->secret_id == id) {
@@ -156,8 +170,10 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             next_id--;
             return newsecret_size;
             }
+            pr_err("no secret with id = %i",id);
             return -EINVAL;
         default:
+            pr_err("no operation was set or unknown operation");
             return -EINVAL;
     }
 }
@@ -175,7 +191,7 @@ static int __init procfs2_init(void)
     storage_filename = proc_create(PROCFS_NAME, 0644, NULL, &proc_file_fops);
     if (NULL == storage_filename) {
     proc_remove(storage_filename);
-    pr_alert("Error:Could not initialize /proc/%s\n", PROCFS_NAME);
+    pr_crit("Error:Could not initialize /proc/%s\n", PROCFS_NAME);
     return -ENOMEM;
     }
     pr_info("/proc/%s created\n", PROCFS_NAME);

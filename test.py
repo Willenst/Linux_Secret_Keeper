@@ -82,12 +82,12 @@ class Test_group_2:
 
 class Test_group_3:
     def test_input_overflow(self):
-        assert write(1,'1'*150) == 'W 1 '+'1'*150+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка превысить длинну секрета # attempt to exceed secret length
+        assert write(1,'1'*150) == 'W 1 '+'1'*150+'\ntee: /proc/secret_stash: Cannot allocate memory\n' #попытка превысить длинну секрета # attempt to exceed secret length
         assert write(-1,'1'*5) == 'W -1 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка создать запись вне массива # attempt to create entry outside array
         assert write(35000,'1'*5) == 'W 35000 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' 
         for i in range(1,15):
              write(i, i)
-        assert write("16", '16') == 'W 16 16\ntee: /proc/secret_stash: Invalid argument\n' #попытка записи сверх лимита # attempt to write beyond limit
+        assert write("16", '16') == 'W 16 16\ntee: /proc/secret_stash: Cannot allocate memory\n' #попытка записи сверх лимита # attempt to write beyond limit
         assert '1. 1\n2. 2\n3. 3\n4. 4\n5. 5\n6. 6\n7. 7\n8. 8\n9. 9\n10. 10\n' in read() #проверка что корректные записи сохранены, некорректных нет # check that correct entries are saved, incorrect ones are not
 
 class Testflush: #мелкая надстройка под очитку файла в proc # small enhancement to cleanup proc entry
