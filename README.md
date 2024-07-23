@@ -22,8 +22,8 @@ rm journal.md; rm -rf Images
 ### Использование:
 
 ```bash
-echo "W -1 secret" | tee /proc/secret_stash # автоматический выбор id для записи, выбирается незанятый, в порядке возрастания 
 echo "W 0 secret" | tee /proc/secret_stash #запись 0-й строки данных.
+echo "W -1 secret" | tee /proc/secret_stash # автоматический выбор id для записи, выбирается незанятый, в порядке возрастания 
 echo "R 0" | tee /proc/secret_stash #выбор строки для чтения.
 echo "R -1" | tee /proc/secret_stash #выбор всех строк для чтения.
 echo "D 0" | tee /proc/secret_stash #выбор строки для удаления.
@@ -82,8 +82,8 @@ rm journal.md; rm -rf Images
 ### Usage:
 
 ```bash
-echo "W -1 secret" | tee /proc/secret_stash # Automatically chose line to write, usually writen to the next available id.
 echo "W 0 secret" | tee /proc/secret_stash # Writing data to the 0th line.
+echo "W -1 secret" | tee /proc/secret_stash # Automatically chose line to write, usually writen to the next available id.
 echo "R 0" | tee /proc/secret_stash # Selecting the line for reading.
 echo "R -1" | tee /proc/secret_stash # Selecting all the lines for reading
 echo "D 0" | tee /proc/secret_stash # Selecting the line for deletion.
