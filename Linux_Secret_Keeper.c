@@ -38,7 +38,7 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
     secret_t* p = NULL;
     char *output_buffer = kmalloc(MAX_SECRET_SIZE*next_id, GFP_KERNEL);;
     char *temp_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
-        if (!output_buffer||!temp_buffer) {
+    if (!output_buffer||!temp_buffer) {
         pr_crit("Memory error, probably out of memory!");
         return -ENOMEM;
     }
@@ -62,7 +62,8 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
             if (p->secret_id == read_index) {
                 sprintf(temp_buffer, "%d. %s\n", p->secret_id, p->secret_data);
                 if (*offset >= MAX_SECRET_SIZE||copy_to_user(buffer, temp_buffer, MAX_SECRET_SIZE)) {
-                    kfree(temp_buffer); 
+                    kfree(temp_buffer);
+                    kfree(output_buffer);
                     return 0;
                 } else {
                     *offset += MAX_SECRET_SIZE;
