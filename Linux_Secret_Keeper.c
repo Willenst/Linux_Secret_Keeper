@@ -38,6 +38,10 @@ static ssize_t procfile_read(struct file *filePointer, char __user *buffer, size
     secret_t* p = NULL;
     char *output_buffer = kmalloc(MAX_SECRET_SIZE*next_id, GFP_KERNEL);;
     char *temp_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
+        if (!output_buffer||!temp_buffer) {
+        pr_crit("Memory error, probably out of memory!");
+        return -ENOMEM;
+    }
     if (read_index == -1){ //итератор для чтения всех элементов //iterator to read all elements
         list_for_each(pos, &secrets) {
             p = list_entry(pos, secret_t, list_node);
@@ -93,6 +97,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     char *secret_buffer = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
     if (!secret_data_input||!secret_buffer) {
         pr_crit("Memory error, probably out of memory!");
+        kfree(secret_data_input);
+        kfree(secret_buffer);
         return -ENOMEM;
     }
     struct list_head *pos;
@@ -103,6 +109,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
     // Check if the size of incoming data exceeds the maximum allowed size
     // Проверка, не превышает ли входная информация максимальный предел 
     if (newsecret_size > MAX_SECRET_SIZE){
+        kfree(secret_data_input);
+        kfree(secret_buffer);
         pr_err("secret size = %lu, secret size must be lower than %i bytes!",newsecret_size,MAX_SECRET_SIZE);
         return -ENOMEM;
     }
@@ -150,7 +158,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
             new_secret->secret_data = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL);
-            if (!secret_data_input||!new_secret) {
+            if (!new_secret) {
                 pr_crit("Memory error, probably out of memory!");
                 return -ENOMEM;
             }
@@ -184,6 +192,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 secret_t* p = list_entry(pos, secret_t, list_node);
                 if (p->secret_id == id||id==-1) {
                     list_del(pos);
+                    kfree(p->secret_data);
                     kfree(p);
                     deleted=true;
                 }
