@@ -25,7 +25,9 @@ rm journal.md; rm -rf Images
 echo "W -1 secret" | tee /proc/secret_stash # автоматический выбор id для записи, выбирается незанятый, в порядке возрастания 
 echo "W 0 secret" | tee /proc/secret_stash #запись 0-й строки данных.
 echo "R 0" | tee /proc/secret_stash #выбор строки для чтения.
+echo "R -1" | tee /proc/secret_stash #выбор всех строк для чтения.
 echo "D 0" | tee /proc/secret_stash #выбор строки для удаления.
+echo "D -1" | tee /proc/secret_stash #удаление всех строк.
 cat /proc/secret_stash #чтение данных, в зависимости от режима чтения. Если -1 - чтение всего, если n - чтение n-й записи, где n - выбраанная вами запись. 
 ```
 
@@ -83,7 +85,9 @@ rm journal.md; rm -rf Images
 echo "W -1 secret" | tee /proc/secret_stash # Automatically chose line to write, usually writen to the next available id.
 echo "W 0 secret" | tee /proc/secret_stash # Writing data to the 0th line.
 echo "R 0" | tee /proc/secret_stash # Selecting the line for reading.
+echo "R -1" | tee /proc/secret_stash # Selecting all the lines for reading
 echo "D 0" | tee /proc/secret_stash # Selecting the line for deletion.
+echo "D -1" | tee /proc/secret_stash # Deleting all the lines
 cat /proc/secret_stash # Reading data, depending on the read mode. If -1, reads all; if n, reads the nth entry you've chosen.
 ```
 

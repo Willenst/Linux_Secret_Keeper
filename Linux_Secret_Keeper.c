@@ -182,7 +182,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 }
             list_for_each_safe(pos, tmp, &secrets) {
                 secret_t* p = list_entry(pos, secret_t, list_node);
-                if (p->secret_id == id) {
+                if (p->secret_id == id||id==-1) {
                     list_del(pos);
                     kfree(p);
                     deleted=true;
