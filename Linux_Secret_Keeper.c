@@ -186,7 +186,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         //delete mode, works through the macro system and cleans the memory of the deleted item
         case 'D':
             if (next_id<1){
-                pr_err("secret id must be positive");
+                pr_err("no secrets left");
                 return -EINVAL;
                 }
             list_for_each_safe(pos, tmp, &secrets) {
@@ -196,11 +196,11 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                     kfree(p->secret_data);
                     kfree(p);
                     deleted=true;
+                    next_id--;
                 }
             }
             if (deleted==true){
-            next_id--;
-            return newsecret_size;
+                return newsecret_size;
             }
             pr_err("no secret with id = %i",id);
             return -EINVAL;
