@@ -83,7 +83,7 @@ class Test_group_2:
 class Test_group_3:
     def test_input_overflow(self):
         assert write(1,'1'*150) == 'W 1 '+'1'*150+'\ntee: /proc/secret_stash: Cannot allocate memory\n' #попытка превысить длинну секрета # attempt to exceed secret length
-        assert write(-1,'1'*5) == 'W -1 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка создать запись вне массива # attempt to create entry outside array
+        assert write(-2,'1'*5) == 'W -2 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' #попытка создать запись вне массива # attempt to create entry outside array
         assert write(35000,'1'*5) == 'W 35000 '+'1'*5+'\ntee: /proc/secret_stash: Invalid argument\n' 
         for i in range(1,15):
              write(i, i)

@@ -14,7 +14,7 @@ MODULE_VERSION("1.00");
 #define MAX_SECRETS 10
 #define PROCFS_NAME "secret_stash"
 #define MAX_ID 30000
-#define MIN_ID 0
+#define MIN_ID -1
 //структура секрета - массив специально созданный под работу смакросом списков
 //secret structure - an array of lists specially created to work with lists macro
 typedef struct secret{
@@ -114,8 +114,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
         printk(KERN_ERR "Failed to parse input\n");
         return -EFAULT;
     }
-    if (id<-1||id>MAX_ID){
-        pr_err("id = %i, id is limited between %i and %i!",id, MAX_ID,(MIN_ID-1));
+    if (id<MIN_ID||id>MAX_ID){
+        pr_err("id = %i, id is limited between %i and %i!",id, MAX_ID,MIN_ID);
         return -EINVAL;
     }
     switch (command) {
@@ -126,13 +126,22 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 pr_err("maximum number of secrets exceeded, delete some secrets!");
                 return -ENOMEM;
                 }
-            if (id<MIN_ID){
-                pr_err("id = %i, write id must be positive!",id);
-                return -EINVAL;  
-            }
             if (secret_finder(id, &secrets)||(strlen(secret_data_input)<1)){
                 pr_err("secret with id = %i already exists!",id);
                 return -EINVAL;
+                }
+            if (id==-1)
+            {   
+                    for (int z = 0; z < MAX_ID; z++) {
+                        if (!secret_finder(z, &secrets)){
+                            id=z;
+                            break;
+                    }
+                }
+                if (id==-1){
+                    pr_err("id can't be created!");
+                    return -EINVAL;
+                }
                 }
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
