@@ -19,7 +19,7 @@ MODULE_VERSION("1.00");
 //secret structure - an array of lists specially created to work with lists macro
 typedef struct secret{
     int secret_id;
-    char secret_data[MAX_SECRET_SIZE];
+    char *secret_data;
     struct list_head list_node;
 } secret_t;
 
@@ -121,6 +121,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buff, size_t
                 return -EINVAL;
             secret_t* new_secret = (secret_t*)kmalloc(sizeof(secret_t), GFP_KERNEL);
             new_secret->secret_id = id;
+            new_secret->secret_data = kmalloc(MAX_SECRET_SIZE, GFP_KERNEL); // ДОКИНУТЬ ОБРАБОТКУ ОШИБОК!!!
             strscpy(new_secret->secret_data, secret_data_input, MAX_SECRET_SIZE);        
             list_add_tail(&new_secret->list_node, &secrets);
             next_id++;
